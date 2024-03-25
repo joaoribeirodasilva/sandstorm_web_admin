@@ -63,7 +63,7 @@ func (l *Log) SetLogLevel(severity Severity) {
 
 func (l *Log) Write(msg string, module string, severity Severity) error {
 
-	if l.level <= severity {
+	if l.level >= severity {
 
 		var err error
 

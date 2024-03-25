@@ -30,9 +30,10 @@ type WebAdmin struct {
 }
 
 type Steam struct {
-	Installer        string `json:"installer"`
-	Dir              string `json:"dir"`
-	AutomaticUpdates bool   `json:"automaticUpdates"`
+	Installer        string            `json:"installer"`
+	Dir              string            `json:"dir"`
+	AutomaticUpdates bool              `json:"automaticUpdates"`
+	DownloadUrls     map[string]string `json:"downloadUrls"`
 }
 
 type Sandstorm struct {
@@ -66,12 +67,13 @@ const (
 	ADMIN_ENV               = "./.env"
 	ADMIN_LOGS              = ADMIN_DIR + "/logs"
 	ADMIN_CONFIG_DIR        = ADMIN_DIR + "/config"
-	STEAM_INSTALLER         = FILESYSTEM_SERVER + "/steam/installer/steamcmd"
-	STEAM_DIR               = FILESYSTEM_SERVER + "/steam/steamcmd"
-	STEAM_AUTOMATIC_UPDATES = "false"
+
+	STEAM_INSTALLER         = FILESYSTEM_SERVER + "/steam/installer"
+	STEAM_DIR               = FILESYSTEM_SERVER + "/steam"
+	STEAM_AUTOMATIC_UPDATES = false
 
 	SANDSTORM_DIR               = FILESYSTEM_SERVER + "/sandstorm"
-	SANDSTORM_AUTOMATIC_UPDATES = "false"
+	SANDSTORM_AUTOMATIC_UPDATES = false
 )
 
 var envFile string = ADMIN_ENV
@@ -106,6 +108,14 @@ func New(log *admin_log.Log) *Configuration {
 	c.WebAdmin.Dir = ADMIN_DIR
 	c.WebAdmin.ConfigDir = ADMIN_CONFIG_DIR
 	c.WebAdmin.Logs = ADMIN_LOGS
+
+	c.Steam.DownloadUrls = make(map[string]string)
+	c.Steam.Installer = STEAM_INSTALLER
+	c.Steam.Dir = STEAM_DIR
+	c.Steam.AutomaticUpdates = STEAM_AUTOMATIC_UPDATES
+
+	c.Sandstorm.Dir = SANDSTORM_DIR
+	c.Sandstorm.AutomaticUpdates = SANDSTORM_AUTOMATIC_UPDATES
 
 	return c
 }
@@ -152,12 +162,12 @@ func (c *Configuration) Read() error {
 	}
 
 	temp = os.Getenv("ADMIN_PASSWORD")
-	if temp != "temp" {
+	if temp != "" {
 		c.WebAdmin.Password = temp
 	}
 
 	temp = os.Getenv("ADMIN_SSL_USE")
-	if temp != "temp" {
+	if temp != "" {
 		c.WebAdmin.SslUse, err = strconv.ParseBool(temp)
 		if err != nil {
 			err = fmt.Errorf("invalid ADMIN_SSL_USE. ERR: %s", err.Error())
@@ -166,7 +176,7 @@ func (c *Configuration) Read() error {
 	}
 
 	temp = os.Getenv("ADMIN_SSL_VERIFY")
-	if temp != "temp" {
+	if temp != "" {
 		c.WebAdmin.SslVerify, err = strconv.ParseBool(temp)
 		if err != nil {
 			err = fmt.Errorf("invalid ADMIN_SSL_VERIFY. ERR: %s", err.Error())
@@ -178,8 +188,8 @@ func (c *Configuration) Read() error {
 	c.WebAdmin.SslKey = os.Getenv("ADMIN_SSL_KEY")
 
 	temp = os.Getenv("ADMIN_AUTOMATIC_UPDATES")
-	if temp != "temp" {
-		c.WebAdmin.AutomaticUpdates, err = strconv.ParseBool(ADMIN_SSL_VERIFY)
+	if temp != "" {
+		c.WebAdmin.AutomaticUpdates, err = strconv.ParseBool(temp)
 		if err != nil {
 			err = fmt.Errorf("invalid ADMIN_AUTOMATIC_UPDATES: %s", err.Error())
 			c.log.Write(err.Error(), MODULE, admin_log.LOG_CRITICAL)
@@ -187,13 +197,38 @@ func (c *Configuration) Read() error {
 	}
 
 	temp = os.Getenv("ADMIN_DIR")
-	if temp != "temp" {
+	if temp != "" {
 		c.WebAdmin.Dir = temp
 	}
 
 	temp = os.Getenv("ADMIN_LOGS")
-	if temp != "temp" {
+	if temp != "" {
 		c.WebAdmin.Logs = temp
+	}
+
+	c.Steam.Installer = os.Getenv("STEAM_INSTALLER")
+	c.Steam.Dir = os.Getenv("STEAM_DIR")
+	temp = os.Getenv("STEAM_AUTOMATIC_UPDATES")
+	if temp != "" {
+		c.Steam.AutomaticUpdates, err = strconv.ParseBool(temp)
+		if err != nil {
+			err = fmt.Errorf("invalid STEAM_AUTOMATIC_UPDATES: %s", err.Error())
+			c.log.Write(err.Error(), MODULE, admin_log.LOG_CRITICAL)
+		}
+	}
+
+	c.Steam.DownloadUrls["linux"] = os.Getenv("STEAM_CMD_LINUX")
+	c.Steam.DownloadUrls["darwin"] = os.Getenv("STEAM_CMD_OSX")
+	c.Steam.DownloadUrls["windows"] = os.Getenv("STEAM_CMD_WINDOWS")
+
+	c.Sandstorm.Dir = os.Getenv("SANDSTORM_DIR")
+	temp = os.Getenv("SANDSTORM_AUTOMATIC_UPDATES")
+	if temp != "" {
+		c.Sandstorm.AutomaticUpdates, err = strconv.ParseBool(temp)
+		if err != nil {
+			err = fmt.Errorf("invalid SANDSTORM_AUTOMATIC_UPDATES: %s", err.Error())
+			c.log.Write(err.Error(), MODULE, admin_log.LOG_CRITICAL)
+		}
 	}
 
 	return nil

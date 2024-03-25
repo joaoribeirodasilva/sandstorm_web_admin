@@ -5,6 +5,8 @@ import (
 	"os"
 )
 
+const MODULE = "Utils"
+
 func FileExists(path string) bool {
 
 	fi := info(path)

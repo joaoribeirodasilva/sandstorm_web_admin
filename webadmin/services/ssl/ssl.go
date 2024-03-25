@@ -6,6 +6,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -76,6 +77,7 @@ func (s *Ssl) Load() bool {
 		if !utils.FileExists(p) {
 			noCert = true
 		} else {
+			s.SslCert = p
 			s.log.Write(fmt.Sprintf("private certificate found at '%s'", s.ConfigDir), MODULE, admin_log.LOG_INFO)
 		}
 	}
@@ -86,6 +88,7 @@ func (s *Ssl) Load() bool {
 		if !utils.FileExists(p) {
 			noKey = true
 		} else {
+			s.SslKey = p
 			s.log.Write(fmt.Sprintf("public certificate key found at '%s'", s.ConfigDir), MODULE, admin_log.LOG_INFO)
 		}
 	}
@@ -96,6 +99,13 @@ func (s *Ssl) Load() bool {
 		}
 
 		s.create()
+	} else {
+		if err := s.validCertificates(); err != nil {
+			s.log.Write(fmt.Sprintf("the certificates found at '%s' are invalid. ERR: %s", s.ConfigDir, err.Error()), MODULE, admin_log.LOG_CRITICAL)
+			return false
+		} else {
+			s.log.Write(fmt.Sprintf("the certificates found at '%s' are ok", s.ConfigDir), MODULE, admin_log.LOG_INFO)
+		}
 	}
 
 	return true
@@ -242,6 +252,12 @@ func (s *Ssl) ips() (*[]net.IP, error) {
 	}
 
 	return &ips, nil
+}
+
+func (s *Ssl) validCertificates() error {
+
+	_, err := tls.LoadX509KeyPair(s.SslCert, s.SslKey)
+	return err
 }
 
 // func (s *Ssl) hostname() error {
